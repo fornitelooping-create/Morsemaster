@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Master</title>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --bg-body: #121212;
+            --bg-container: #1e1e1e;
+            --text-main: #e0e0e0;
+            --textarea-bg: #2a2a2a;
+            --morse-color: #00C20F;
+            --border-color: #444;
+            --btn-gray: #444;
+            --btn-report: #d93025;
+        }
+        .light-mode {
+            --bg-body: #f0f2f5;
+            --bg-container: #ffffff;
+            --text-main: #2b1515;
+            --textarea-bg: #ffffff;
+            --border-color: #ddd;
+            --btn-gray: #bdc3c7;
+            --btn-report: #c5221f;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .side-menu {
+            height: 100%; width: 280px; position: fixed; z-index: 200;
+            top: 0; left: 0; background-color: var(--bg-container);
+            border-right: 1px solid var(--border-color);
+            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-100%);
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .side-menu.active { transform: translateX(0); }
+        .menu-content { display: flex; width: 560px; height: 100%; transition: transform 0.3s ease; }
+        .menu-content.view-settings { transform: translateX(-280px); }
+        .menu-section { width: 280px; padding-top: 60px; flex-shrink: 0; }
+        .menu-item {
+            padding: 15px 25px; font-size: 1.1rem; color: var(--text-main);
+            display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
+        }
+        .menu-item:hover { background-color: var(--primary); color: white; }
+        .hamburger-menu {
+            position: fixed; top: 25px; left: 25px; width: 30px; height: 20px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            cursor: pointer; z-index: 300;
+        }
+        .hamburger-menu span { height: 4px; width: 100%; background: var(--primary); border-radius: 4px; }
+        .page { display: none; width: 90%; max-width: 900px; animation: fadeIn 0.5s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .container {
+            background: var(--bg-container); padding: 2.5rem; border-radius: 16px;
+            border: 1px solid var(--border-color); text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .button-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 25px; }
+        .btn-main {
+            background: var(--primary); color: white; border: none; padding: 14px 28px;
+            border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1rem;
+            transition: 0.3s; display: flex; align-items: center; gap: 8px; justify-content: center;
+        }
+        .btn-main:hover { background: var(--primary-dark); transform: translateY(-2px); }
+        .btn-main:disabled { background: #666; cursor: wait; transform: none; }
+        .btn-custom { background: var(--btn-gray); }
+        .btn-report { background: transparent; border: 2px solid var(--btn-report); color: var(--btn-report); }
+        .btn-report:hover { background: var(--btn-report); color: white; }
+        .hero-title { font-size: 3.5rem; color: var(--primary); margin: 0 0 10px 0; }
+        .hero-subtitle { font-size: 1.2rem; color: #888; margin-bottom: 10px; }
+        .close-icon { position: absolute; top: 15px; right: 20px; font-size: 25px; cursor: pointer; color: var(--text-main); }
+        .login-card { max-width: 460px; margin: 0 auto; padding: 2.5rem; }
+        .login-logo { font-size: 3rem; margin-bottom: 10px; }
+        .login-title { font-size: 1.8rem; color: var(--primary); margin: 0 0 8px 0; }
+        .login-subtitle { color: #888; font-size: 0.95rem; margin-bottom: 24px; }
+        .login-divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 16px 0; color: #666; font-size: 0.85rem;
+        }
+        .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+        .form-group { text-align: left; margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.85rem; color: #888; margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px 16px; border-radius: 10px;
+            border: 1px solid var(--border-color); background: var(--textarea-bg);
+            color: var(--text-main); font-size: 1rem; outline: none; transition: border-color 0.2s;
+        }
+        .form-group input:focus { border-color: var(--primary); }
+        .form-error { color: var(--btn-report); font-size: 0.82rem; margin-top: 4px; display: none; }
+        .form-error.visible { display: block; }
+        .btn-login-email {
+            width: 100%; padding: 13px; border-radius: 50px;
+            background: var(--primary); color: white; border: none;
+            font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 6px;
+        }
+        .btn-login-email:hover { background: var(--primary-dark); }
+        .btn-login-email:disabled { background: #666; cursor: wait; }
+        .user-profile-box {
+            display: none; flex-direction: column; align-items: center; gap: 12px;
+            padding: 20px; background: rgba(26,115,232,0.08); border-radius: 16px;
+            border: 1px solid rgba(26,115,232,0.3); margin-top: 20px;
+        }
+        .user-profile-box img { width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--primary); }
+        .user-profile-box .user-display-name { font-size: 1.1rem; font-weight: bold; }
+        .user-profile-box .user-display-email { font-size: 0.85rem; color: #888; }
+        .user-badge-admin { background: #ff6f00; color: white; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: bold; letter-spacing: 1px; }
+        .btn-logout {
+            background: transparent; border: 1px solid var(--border-color);
+            color: var(--text-main); padding: 8px 20px; border-radius: 20px;
+            cursor: pointer; font-size: 0.85rem; margin-top: 5px;
+        }
+        .btn-logout:hover { background: var(--btn-report); color: white; border-color: var(--btn-report); }
+        #googleSignInBtn { display: flex; justify-content: center; margin: 10px 0; }
+        #adminPage .container { text-align: left; }
+        .admin-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; }
+        .admin-header h1 { margin: 0; font-size: 1.8rem; color: var(--primary); }
+        .admin-header .badge-admin { background: #ff6f00; color: white; font-size: 0.8rem; padding: 4px 12px; border-radius: 20px; font-weight: bold; }
+        .admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .admin-tab {
+            padding: 8px 20px; border-radius: 50px; cursor: pointer;
+            border: 1px solid var(--border-color); background: transparent;
+            color: var(--text-main); font-size: 0.9rem; transition: 0.2s;
+        }
+        .admin-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .admin-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+        .admin-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .admin-stat-card { background: rgba(26,115,232,0.08); border: 1px solid rgba(26,115,232,0.2); border-radius: 12px; padding: 16px; text-align: center; }
+        .admin-stat-card .val { font-size: 2rem; font-weight: bold; color: var(--primary); }
+        .admin-stat-card .lbl { font-size: 0.78rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+        .admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .admin-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border-color); color: #888; font-weight: 600; }
+        .admin-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
+        .admin-table tr:last-child td { border-bottom: none; }
+        .badge-role { font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: bold; }
+        .badge-role.admin { background: rgba(255,111,0,0.15); color: #ff6f00; }
+        .badge-role.user { background: rgba(26,115,232,0.12); color: var(--primary); }
+        .admin-log { background: var(--textarea-bg); border-radius: 10px; padding: 14px; font-family: monospace; font-size: 0.85rem; line-height: 1.7; max-height: 300px; overflow-y: auto; }
+        .admin-log .log-line { color: #aaa; }
+        .admin-log .log-line .ts { color: var(--primary); margin-right: 8px; }
+        .admin-log .log-line.warn .ts { color: #ff6f00; }
+        .admin-log .log-line.err .ts { color: var(--btn-report); }
+        .admin-config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .admin-config-item { display: flex; align-items: center; justify-content: space-between; padding: 14px; background: var(--textarea-bg); border-radius: 10px; }
+        .admin-config-item label { font-size: 0.9rem; }
+        .toggle-switch { position: relative; width: 42px; height: 22px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #555; border-radius: 22px; transition: 0.3s; }
+        .toggle-switch .slider:before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+        .toggle-switch input:checked + .slider { background: var(--primary); }
+        .toggle-switch input:checked + .slider:before { transform: translateX(20px); }
+        .audio-bar { background: rgba(0,0,0,0.2); padding: 10px 20px; border-radius: 50px; display: inline-flex; align-items: center; gap: 15px; margin-bottom: 20px; border: 1px solid var(--border-color); }
+        .audio-bar input[type="range"] { cursor: pointer; accent-color: var(--primary); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
+        textarea { width: 100%; height: 200px; background: var(--textarea-bg); color: var(--text-main); border: 2px solid var(--border-color); border-radius: 12px; padding: 15px; resize: none; outline: none; font-size: 1.1rem; box-sizing: border-box; transition: border-color 0.2s; }
+        textarea:focus { border-color: var(--primary); }
+        .morse-theme { background: #000 !important; color: var(--morse-color) !important; letter-spacing: 3px; font-weight: bold; }
+        .btn-indispo { cursor: not-allowed; pointer-events: none; opacity: 0.6; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #ffffff44; border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 700px) {
+            .grid { grid-template-columns: 1fr; }
+            body { align-items: flex-start; padding: 80px 0 40px; }
+            .hero-title { font-size: 2.5rem; }
+            .admin-config-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav id="sideMenu" class="side-menu">
+        <span class="close-icon" id="closeMenu">&times;</span>
+        <div class="menu-content" id="menuContent">
+            <div class="menu-section">
+                <div class="menu-item" onclick="showPage('homePage')">🏠 Accueil</div>
+                <div class="menu-item" onclick="showPage('loginPage')">👤 Connexion</div>
+                <div class="menu-item" onclick="showPage('translatorPage')">📟 Traducteur</div>
+                <div class="menu-item" id="adminMenuItem" style="display:none;" onclick="showPage('adminPage')">🛡️ Panel Admin</div>
+                <div class="menu-item" id="goToSettings">⚙️ Paramètres <span>❯</span></div>
+                <div class="menu-item" onclick="showPage('learningPage')">📚 Apprendre</div>
+            </div>
+            <div class="menu-section">
+                <div class="menu-item" id="backToMain" style="background:rgba(0,0,0,0.1);">❮ Retour</div>
+                <div class="menu-item" id="themeToggle">🌓 Inverser Contraste</div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hamburger-menu" id="hamburger"><span></span><span></span><span></span></div>
+
+    <!-- PAGE ACCUEIL -->
+    <div id="homePage" class="page active">
+        <div class="container">
+            <h1 class="hero-title">Morse Master</h1>
+            <p class="hero-subtitle">L'outil de communication ultime pour les signaux secrets.</p>
+            <div class="button-group">
+                <button class="btn-main" onclick="showPage('translatorPage')">🚀 Commencer</button>
+                <button class="btn-main btn-custom" onclick="window.open('https://paypal.me/loopingdetwitch','_blank')">☕ Soutenir le projet</button>
+                <button class="btn-main btn-report" id="reportBtn">⚠️ Signaler un bug</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE CONNEXION -->
+    <div id="loginPage" class="page">
+        <div class="container login-card">
+            <div class="login-logo">📡</div>
+            <h2 class="login-title">Connexion</h2>
+            <p class="login-subtitle">Connecte-toi pour sauvegarder tes scores et accéder au combat en ligne.</p>
+
+            <div id="googleSignInBtn">
+                <button class="btn-main" id="googleBtn" onclick="loginWithGoogle()" style="width:100%; justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                    Se connecter avec Google
+                </button>
+            </div>
+
+            <div class="login-divider">ou continuer avec un compte</div>
+
+            <div id="emailLoginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Adresse e-mail</label>
+                    <input type="email" id="loginEmail" placeholder="exemple@email.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Mot de passe</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+                    <div class="form-error" id="loginError">Email ou mot de passe incorrect.</div>
+                </div>
+                <button class="btn-login-email" id="emailLoginBtn" onclick="handleEmailLogin()">🔐 Se connecter</button>
+                <p style="text-align:center; margin-top:12px; font-size:0.85rem; color:#888;">
+                    Pas encore de compte ? <span style="color:var(--primary); cursor:pointer;" onclick="toggleRegister()">Créer un compte</span>
+                </p>
+            </div>
+
+            <div id="registerForm" style="display:none;">
+                <div class="form-group">
+                    <label for="regName">Pseudo</label>
+                    <input type="text" id="regName" placeholder="MorseMaster42">
+                </div>
+                <div class="form-group">
+                    <label for="regEmail">Adresse e-mail</label>
+                    <input type="email" id="regEmail" placeholder="exemple@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="regPassword">Mot de passe</label>
+                    <input type="password" id="regPassword" placeholder="Minimum 6 caractères">
+                    <div class="form-error" id="registerError"></div>
+                </div>
+                <button class="btn-login-email" id="registerBtn" onclick="handleRegister()">✅ Créer mon compte</button>
+                <p style="text-align:center; margin-top:12px; font-size:0.85rem; color:#888;">
+                    Déjà un compte ? <span style="color:var(--primary); cursor:pointer;" onclick="toggleRegister()">Se connecter</span>
+                </p>
+            </div>
+
+            <div class="login-divider" style="margin-top:20px;"></div>
+            <p style="color:#666; font-size:0.85rem; text-align:center;">D'autres méthodes de connexion arrivent bientôt.</p>
+
+            <div class="user-profile-box" id="userProfileBox">
+                <img id="userPhoto" src="" alt="photo de profil" style="display:none;">
+                <span class="user-display-name" id="userName"></span>
+                <span class="user-display-email" id="userEmail"></span>
+                <span class="user-badge-admin" id="adminBadge" style="display:none;">👑 ADMIN</span>
+                <button class="btn-main" id="goAdminPanelBtn" style="display:none; margin-top:5px; font-size:0.85rem; padding:10px 20px;" onclick="showPage('adminPage')">🛡️ Ouvrir le Panel Admin</button>
+                <button class="btn-logout" id="logoutBtn" onclick="handleLogout()">🚪 Se déconnecter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE TRADUCTEUR -->
+    <div id="translatorPage" class="page">
+        <div class="container">
+            <h1>📟 Traducteur</h1>
+            <div class="audio-bar">
+                <span id="soundStatusLabel">🔊 Son Activé</span>
+                <input type="checkbox" id="muteToggle" checked>
+                <label for="volumeRange">Volume :</label>
+                <input type="range" id="volumeRange" min="0" max="1" step="0.1" value="0.5">
+            </div>
+            <div style="display:flex; gap:10px; justify-content:center; margin-bottom:20px; flex-wrap:wrap;">
+                <button class="btn-main" id="toggleMode" style="font-size:0.9rem;">
+                    🔄 MODE : <span id="modeText">Texte vers Morse</span>
+                </button>
+                <button class="btn-main" id="playMorseBtn" style="background:var(--morse-color); color:black;">
+                    🔊 Écouter
+                </button>
+            </div>
+            <div class="grid">
+                <div>
+                    <label id="labelLeft">Saisie (Latin)</label>
+                    <textarea id="inputLeft" placeholder="Tapez ici..."></textarea>
+                </div>
+                <div>
+                    <label id="labelRight">Résultat (Morse)</label>
+                    <textarea id="inputRight" class="morse-theme" readonly></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+ <!-- Page Apprendre le Morse -->
+<div id="learningPage" class="page">
+    <div class="container">
+        <h1>📚 Apprendre le Morse</h1>
+        <p style="color:#888; margin-bottom:20px;">
+            Une section dédiée à l'apprentissage du code Morse est là. Restez à l'écoute !
+        </p>
+        <button class="btn-main" onclick="window.location.href='cours.html'">
+    Voyager vers l'apprentissage
+</button>
+
+    </div>
+</div>
+
+        <!--cours morse-->
+ <div id="coursmorsegratos" class="page">
+    <div class="container">
+        <h1>🚀 Cours de Morse Gratuits</h1>
+        <p style="color:#888; margin-bottom:20px;">
+            Découvrez nos cours interactifs pour maîtriser le code Morse, du niveau débutant à avancé.
+            Apprenez à votre rythme avec des exercices pratiques et des quiz pour tester vos connaissances.
+        </p>
+        <button class="btn-main">Accéder aux cours gratuits</button>
+    </div>
+</div>
+    <!-- PAGE ADMIN -->
+    <div id="adminPage" class="page">
+        <div class="container">
+            <div class="admin-header">
+                <h1>🛡️ Panel Admin</h1>
+                <span class="badge-admin">ADMIN</span>
+            </div>
+            <div class="admin-tabs">
+                <button class="admin-tab active" onclick="switchAdminTab('dashboard')">📊 Dashboard</button>
+                <button class="admin-tab" onclick="switchAdminTab('users')">👥 Utilisateurs</button>
+                <button class="admin-tab" onclick="switchAdminTab('logs')">📋 Logs</button>
+                <button class="admin-tab" onclick="switchAdminTab('config')">⚙️ Configuration</button>
+            </div>
+            <div class="admin-section active" id="admin-dashboard">
+                <div class="admin-stat-grid">
+                    <div class="admin-stat-card"><div class="val" id="statTotalUsers">—</div><div class="lbl">Utilisateurs</div></div>
+                    <div class="admin-stat-card"><div class="val" id="statOnline">—</div><div class="lbl">En ligne</div></div>
+                    <div class="admin-stat-card"><div class="val" id="statTranslations">—</div><div class="lbl">Traductions</div></div>
+                    <div class="admin-stat-card"><div class="val" id="statReports">0</div><div class="lbl">Rapports</div></div>
+                </div>
+                <p style="color:#888; font-size:0.9rem; margin-top:10px;">Dernière mise à jour : <span id="lastRefresh">—</span></p>
+                <button class="btn-main" style="margin-top:10px; font-size:0.85rem; padding:10px 20px;" onclick="refreshAdminStats()">🔄 Actualiser</button>
+            </div>
+            <div class="admin-section" id="admin-users">
+                <table class="admin-table">
+                    <thead><tr><th>Pseudo</th><th>Email</th><th>Rôle</th><th>Inscrit le</th></tr></thead>
+                    <tbody id="adminUsersBody">
+                        <tr><td colspan="4" style="color:#888; text-align:center; padding:20px;">Chargement...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="admin-section" id="admin-logs">
+                <div class="admin-log" id="adminLogBox">
+                    <div class="log-line"><span class="ts">[INFO]</span> Panel admin initialisé.</div>
+                    <div class="log-line"><span class="ts">[INFO]</span> Firebase connecté.</div>
+                </div>
+                <button class="btn-main btn-report" style="margin-top:12px; font-size:0.85rem; padding:10px 20px;" onclick="clearLogs()">🗑️ Vider les logs</button>
+            </div>
+            <div class="admin-section" id="admin-config">
+                <div class="admin-config-grid">
+                    <div class="admin-config-item"><label>🔊 Son global activé</label><label class="toggle-switch"><input type="checkbox" checked id="cfgSound"><span class="slider"></span></label></div>
+                    <div class="admin-config-item"><label>🌙 Mode sombre par défaut</label><label class="toggle-switch"><input type="checkbox" checked id="cfgDark"><span class="slider"></span></label></div>
+                    <div class="admin-config-item"><label>⚔️ Combat en ligne activé</label><label class="toggle-switch"><input type="checkbox" id="cfgCombat"><span class="slider"></span></label></div>
+                    <div class="admin-config-item"><label>📝 Inscriptions ouvertes</label><label class="toggle-switch"><input type="checkbox" checked id="cfgReg"><span class="slider"></span></label></div>
+                    <div class="admin-config-item"><label>📧 Notifications mail</label><label class="toggle-switch"><input type="checkbox" id="cfgMail"><span class="slider"></span></label></div>
+                    <div class="admin-config-item"><label>🛡️ Mode maintenance</label><label class="toggle-switch"><input type="checkbox" id="cfgMaint"><span class="slider"></span></label></div>
+                </div>
+                <button class="btn-main" style="margin-top:20px; font-size:0.9rem; padding:12px 28px;" onclick="saveAdminConfig()">💾 Sauvegarder la configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        // ===== CONFIG FIREBASE =====
+        const firebaseConfig = {
+            apiKey: "AIzaSyARfTP5CPvKEVooLvmVhmMrw8Cd-YGsZWY",
+            authDomain: "morsemaster-90.firebaseapp.com",
+            projectId: "morsemaster-90",
+            storageBucket: "morsemaster-90.firebasestorage.app",
+            messagingSenderId: "370993039695",
+            appId: "1:370993039695:web:7bc4ea46555e511fa05d3a",
+            measurementId: "G-L4X9F749G5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        // ===== TON EMAIL ADMIN (change si besoin) =====
+        const ADMIN_EMAIL = "fornite.loopign@gmail.com";
+
+        // ===== ETAT AUTH EN TEMPS REEL =====
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                const role = userDoc.exists() ? userDoc.data().role : 'user';
+                const name = user.displayName || userDoc.data()?.name || user.email.split('@')[0];
+                window.currentUser = { uid: user.uid, name, email: user.email, photo: user.photoURL, role };
+                showUserProfile(window.currentUser);
+                addAdminLog(`[INFO] Connecté : ${user.email}`);
+            } else {
+                window.currentUser = null;
+                hideUserProfile();
+            }
+        });
+
+        // ===== CONNEXION GOOGLE =====
+        window.loginWithGoogle = async () => {
+            try {
+                const result = await signInWithPopup(auth, googleProvider);
+                const user = result.user;
+                const role = user.email === ADMIN_EMAIL ? 'admin' : 'user';
+                await setDoc(doc(db, "users", user.uid), {
+                    name: user.displayName,
+                    email: user.email,
+                    photo: user.photoURL,
+                    role,
+                    createdAt: serverTimestamp()
+                }, { merge: true });
+            } catch (e) {
+                addAdminLog(`[ERR] Google auth : ${e.message}`);
+                alert("Erreur Google : " + e.message);
+            }
+        };
+
+        // ===== CONNEXION EMAIL =====
+        window.handleEmailLogin = async () => {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errEl = document.getElementById('loginError');
+            const btn = document.getElementById('emailLoginBtn');
+            errEl.classList.remove('visible');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>';
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                addAdminLog(`[INFO] Connexion email : ${email}`);
+            } catch (e) {
+                errEl.innerText = e.code === 'auth/invalid-credential' ? 'Email ou mot de passe incorrect.' : e.message;
+                errEl.classList.add('visible');
+                addAdminLog(`[WARN] Échec connexion : ${email}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔐 Se connecter';
+            }
+        };
+
+        // ===== INSCRIPTION =====
+        window.handleRegister = async () => {
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const errEl = document.getElementById('registerError');
+            const btn = document.getElementById('registerBtn');
+            errEl.classList.remove('visible');
+
+            if (!name || !email || !password) {
+                errEl.innerText = 'Tous les champs sont obligatoires.';
+                errEl.classList.add('visible'); return;
+            }
+            if (password.length < 6) {
+                errEl.innerText = 'Le mot de passe doit faire au moins 6 caractères.';
+                errEl.classList.add('visible'); return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>';
+            try {
+                const result = await createUserWithEmailAndPassword(auth, email, password);
+                await updateProfile(result.user, { displayName: name });
+                const role = email === ADMIN_EMAIL ? 'admin' : 'user';
+                await setDoc(doc(db, "users", result.user.uid), {
+                    name, email, role,
+                    createdAt: serverTimestamp()
+                });
+                addAdminLog(`[INFO] Nouveau compte : ${email}`);
+            } catch (e) {
+                errEl.innerText = e.code === 'auth/email-already-in-use' ? 'Cet email est déjà utilisé.' : e.message;
+                errEl.classList.add('visible');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✅ Créer mon compte';
+            }
+        };
+
+        // ===== DÉCONNEXION =====
+        window.handleLogout = async () => {
+            await signOut(auth);
+            addAdminLog('[INFO] Déconnexion.');
+        };
+
+        // ===== ADMIN : charger les users depuis Firestore =====
+        window.loadAdminUsers = async () => {
+            const tbody = document.getElementById('adminUsersBody');
+            tbody.innerHTML = '<tr><td colspan="4" style="color:#888;text-align:center;padding:20px;">Chargement...</td></tr>';
+            try {
+                const snap = await getDocs(collection(db, "users"));
+                if (snap.empty) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="color:#888;text-align:center;padding:20px;">Aucun utilisateur.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = snap.docs.map(d => {
+                    const u = d.data();
+                    const date = u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString('fr-FR') : '—';
+                    return `<tr>
+                        <td>${u.name || '—'}</td>
+                        <td>${u.email}</td>
+                        <td><span class="badge-role ${u.role}">${u.role === 'admin' ? '👑 Admin' : '👤 Utilisateur'}</span></td>
+                        <td>${date}</td>
+                    </tr>`;
+                }).join('');
+                document.getElementById('statTotalUsers').innerText = snap.size;
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="4" style="color:red;text-align:center;padding:20px;">Erreur : ${e.message}</td></tr>`;
+            }
+        };
+
+        window.refreshAdminStats = async () => {
+            await window.loadAdminUsers();
+            document.getElementById('statOnline').innerText = Math.floor(Math.random() * 30) + 5;
+            document.getElementById('statTranslations').innerText = Math.floor(Math.random() * 500) + 100;
+            document.getElementById('lastRefresh').innerText = new Date().toLocaleTimeString('fr-FR');
+            addAdminLog('[INFO] Stats actualisées.');
+        };
+    </script>
+
+    <script>
+        // ===== MORSE =====
+        const morseAlphabet = {
+            'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---',
+            'K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-',
+            'U':'..-','V':'...-','W':'.--','X':'-..-','Y':'-.--','Z':'--..',
+            '1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..',
+            '9':'----.','0':'-----',' ':'/'
+        };
+        const reverseMorse = Object.fromEntries(Object.entries(morseAlphabet).map(([k,v]) => [v,k]));
+
+        window.currentUser = null;
+
+        // ===== AFFICHAGE PROFIL =====
+        function showUserProfile(user) {
+            const box = document.getElementById('userProfileBox');
+            document.getElementById('emailLoginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('googleSignInBtn').style.display = 'none';
+            const photo = document.getElementById('userPhoto');
+            if (user.photo) { photo.src = user.photo; photo.style.display = 'block'; }
+            else { photo.style.display = 'none'; }
+            document.getElementById('userName').innerText = user.name;
+            document.getElementById('userEmail').innerText = user.email;
+            const isAdmin = user.role === 'admin';
+            document.getElementById('adminBadge').style.display = isAdmin ? 'inline-block' : 'none';
+            document.getElementById('goAdminPanelBtn').style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('adminMenuItem').style.display = isAdmin ? 'flex' : 'none';
+            box.style.display = 'flex';
+            if (isAdmin) window.refreshAdminStats && window.refreshAdminStats();
+        }
+
+        function hideUserProfile() {
+            document.getElementById('userProfileBox').style.display = 'none';
+            document.getElementById('emailLoginForm').style.display = 'block';
+            document.getElementById('googleSignInBtn').style.display = 'flex';
+            document.getElementById('adminMenuItem').style.display = 'none';
+        }
+
+        function toggleRegister() {
+            const loginF = document.getElementById('emailLoginForm');
+            const regF = document.getElementById('registerForm');
+            if (loginF.style.display === 'none') { loginF.style.display = 'block'; regF.style.display = 'none'; }
+            else { loginF.style.display = 'none'; regF.style.display = 'block'; }
+        }
+        window.toggleRegister = toggleRegister;
+
+        // ===== NAVIGATION =====
+        function showPage(pageId) {
+            if (pageId === 'adminPage' && (!window.currentUser || window.currentUser.role !== 'admin')) {
+                alert('⛔ Accès refusé.'); return;
+            }
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            closeSidebar();
+        }
+        window.showPage = showPage;
+
+        // ===== ADMIN =====
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.admin-tab').forEach((t,i) => t.classList.toggle('active', ['dashboard','users','logs','config'][i] === tab));
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('admin-' + tab).classList.add('active');
+            if (tab === 'users') window.loadAdminUsers && window.loadAdminUsers();
+        }
+        window.switchAdminTab = switchAdminTab;
+
+        function addAdminLog(msg) {
+            const box = document.getElementById('adminLogBox');
+            const now = new Date().toLocaleTimeString('fr-FR');
+            const type = msg.includes('[WARN]') ? 'warn' : msg.includes('[ERR]') ? 'err' : '';
+            const line = document.createElement('div');
+            line.className = 'log-line ' + type;
+            line.innerHTML = `<span class="ts">${now}</span>${msg}`;
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+        }
+        window.addAdminLog = addAdminLog;
+
+        function clearLogs() {
+            document.getElementById('adminLogBox').innerHTML = '<div class="log-line"><span class="ts">[INFO]</span> Logs vidés.</div>';
+        }
+        window.clearLogs = clearLogs;
+
+        function saveAdminConfig() {
+            addAdminLog('[INFO] Configuration sauvegardée.');
+            alert('✅ Configuration sauvegardée !');
+        }
+        window.saveAdminConfig = saveAdminConfig;
+
+        // ===== AUDIO =====
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let isPlaying = false;
+
+        function playClick(volume, time) {
+            const bufferSize = audioCtx.sampleRate * 0.02;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseGain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = "highpass"; filter.frequency.setValueAtTime(1000, time);
+            noiseGain.gain.setValueAtTime(volume * 0.2, time);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.01);
+            noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+            noise.start(time);
+        }
+
+        function playTone(duration, volume) {
+            return new Promise(resolve => {
+                if (!document.getElementById('muteToggle').checked) { resolve(); return; }
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(600, now);
+                playClick(volume, now);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volume * 0.3, now + 0.005);
+                gain.gain.setValueAtTime(volume * 0.3, now + (duration / 1000) - 0.005);
+                gain.gain.linearRampToValueAtTime(0, now + (duration / 1000));
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now);
+                setTimeout(() => { playClick(volume, audioCtx.currentTime); osc.stop(); resolve(); }, duration);
+            });
+        }
+
+        async function playMorseCode(code) {
+            if (isPlaying) return;
+            isPlaying = true;
+            const btn = document.getElementById('playMorseBtn');
+            const vol = parseFloat(document.getElementById('volumeRange').value);
+            btn.disabled = true; btn.innerText = "⌛ Lecture...";
+            const unit = 110;
+            for (let char of code) {
+                if (char === '.') await playTone(unit, vol);
+                else if (char === '-') await playTone(unit * 3, vol);
+                else if (char === ' ') await new Promise(r => setTimeout(r, unit * 3));
+                else if (char === '/') await new Promise(r => setTimeout(r, unit * 7));
+                await new Promise(r => setTimeout(r, unit));
+            }
+            isPlaying = false;
+            btn.disabled = false; btn.innerText = "🔊 Écouter";
+        }
+
+        // ===== TRADUCTEUR =====
+        const inputLeft = document.getElementById('inputLeft');
+        const inputRight = document.getElementById('inputRight');
+        window.isLatinToMorse = true;
+
+        inputLeft.oninput = () => {
+            if (window.isLatinToMorse) {
+                inputRight.value = inputLeft.value.toUpperCase().split('').map(c => morseAlphabet[c] || '').join(' ').replace(/\s+/g,' ').trim();
+            } else {
+                inputRight.value = inputLeft.value.trim().split(' ').map(s => reverseMorse[s] || '').join('');
+            }
+        };
+
+        document.getElementById('playMorseBtn').onclick = () => {
+            const code = window.isLatinToMorse ? inputRight.value : inputLeft.value;
+            if (code) { if (audioCtx.state === 'suspended') audioCtx.resume(); playMorseCode(code); }
+        };
+
+        document.getElementById('toggleMode').onclick = () => {
+            window.isLatinToMorse = !window.isLatinToMorse;
+            inputLeft.value = ''; inputRight.value = '';
+            document.getElementById('modeText').innerText = window.isLatinToMorse ? "Texte vers Morse" : "Morse vers Texte";
+            document.getElementById('labelLeft').innerText = window.isLatinToMorse ? "Saisie (Latin)" : "Saisie (Morse)";
+            document.getElementById('labelRight').innerText = window.isLatinToMorse ? "Résultat (Morse)" : "Résultat (Latin)";
+            inputLeft.classList.toggle('morse-theme');
+            inputRight.classList.toggle('morse-theme');
+        };
+
+        // ===== MENU =====
+        const sideMenu = document.getElementById('sideMenu');
+        const menuContent = document.getElementById('menuContent');
+        document.getElementById('hamburger').onclick = () => sideMenu.classList.add('active');
+        document.getElementById('closeMenu').onclick = closeSidebar;
+        function closeSidebar() {
+            sideMenu.classList.remove('active');
+            setTimeout(() => menuContent.classList.remove('view-settings'), 400);
+        }
+        document.getElementById('goToSettings').onclick = () => menuContent.classList.add('view-settings');
+        document.getElementById('backToMain').onclick = () => menuContent.classList.remove('view-settings');
+        document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light-mode');
+        document.getElementById('muteToggle').onchange = (e) => {
+            document.getElementById('soundStatusLabel').innerText = e.target.checked ? "🔊 Son Activé" : "🔇 Son Désactivé";
+        };
+        document.getElementById('reportBtn').onclick = () => {
+            const email = "fornite.loopign@gmail.com";
+            const sujet = "Rapport de bug - Morse Master";
+            const corps = "Bonjour,\n\nJ'ai remarqué un bug :\n- Description : \n- Appareil : ";
+            window.location.href = `mailto:${email}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+        };
+        document.addEventListener('click', (e) => {
+            if (sideMenu.classList.contains('active') && !sideMenu.contains(e.target) && !document.getElementById('hamburger').contains(e.target)) closeSidebar();
+        });
+        document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') window.handleEmailLogin && window.handleEmailLogin(); });
+        document.getElementById('loginEmail').addEventListener('keydown', e => { if (e.key === 'Enter') window.handleEmailLogin && window.handleEmailLogin(); });
+
+    </script>
+</body>
+</html>
